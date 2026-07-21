@@ -462,7 +462,10 @@ function renderCatalog(){
 // load any previously saved custom catalog entries (images stored as data URLs)
 function saveCatalog(){
   try{
-    const custom = CATALOG.filter(it=> String(it.id).startsWith('u-')).map(it=>({ id: it.id, name: it.name, price: it.price, cat: it.cat, w: it.w, d: it.d, color: it.color, image: it.image }));
+    const custom = CATALOG.filter(it=> String(it.id).startsWith('u-')).map(it=>{
+      const m = (it.modelUrl && typeof it.modelUrl === 'string' && it.modelUrl.startsWith('http')) ? it.modelUrl : null;
+      return { id: it.id, name: it.name, price: it.price, cat: it.cat, w: it.w, d: it.d, color: it.color, image: it.image, modelUrl: m, modelName: it.modelName || null };
+    });
     localStorage.setItem('mz-room-custom-catalog', JSON.stringify(custom));
   }catch(err){ console.warn('saveCatalog failed', err); }
 }
@@ -484,6 +487,29 @@ function loadCatalog(){
         image: item.image,
         build: (cColor)=>{
           const g = new THREE.Group();
+          if(item.modelUrl && typeof THREE.GLTFLoader !== 'undefined'){
+            // placeholder
+            addBox(g, Math.min(0.6,item.w), 0.02, Math.min(0.6,item.d), mat('#888', 1), 0, 0.01, 0);
+            try{
+              const loader = new THREE.GLTFLoader();
+              loader.load(item.modelUrl, (gltf)=>{
+                const model = gltf.scene || (gltf.scenes && gltf.scenes[0]);
+                if(!model) return;
+                model.traverse(n=>{ if(n.isMesh){ n.castShadow=true; n.receiveShadow=true; } });
+                // scale to approximate size
+                const box = new THREE.Box3().setFromObject(model);
+                const size = new THREE.Vector3(); box.getSize(size);
+                const sx = (item.w) / Math.max(size.x, 0.001);
+                const sz = (item.d) / Math.max(size.z, 0.001);
+                const s = Math.min(sx, sz, 1.5);
+                model.scale.setScalar(s);
+                const center = new THREE.Vector3(); box.getCenter(center);
+                model.position.sub(center.multiplyScalar(s));
+                g.clear(); g.add(model);
+              }, undefined, (err)=>{ console.warn('GLTF load failed', err); });
+            }catch(err){ console.warn('GLTF loader not available', err); }
+            return g;
+          }
           addBox(g, item.w, 0.45, item.d, mat(cColor || item.color || '#999', 0.6), 0, 0.225, 0);
           return g;
         }
@@ -507,8 +533,10 @@ document.getElementById('addProductBtn').addEventListener('click', ()=>{
   const d = parseFloat(document.getElementById('prodDepth').value) || 0.5;
   if(!name){ showToast('Enter a product name'); return; }
   const id = 'u-'+Date.now();
-  const file = document.getElementById('prodImage').files && document.getElementById('prodImage').files[0];
-  const doAdd = (imageData)=>{
+  const imageFile = document.getElementById('prodImage').files && document.getElementById('prodImage').files[0];
+  const modelFile = document.getElementById('prodModel').files && document.getElementById('prodModel').files[0];
+
+  const addWithImageAndModel = (imageData, modelUrl, modelName)=>{
     const newItem = {
       id,
       name,
@@ -518,9 +546,35 @@ document.getElementById('addProductBtn').addEventListener('click', ()=>{
       d,
       color,
       image: imageData || null,
+      modelUrl: modelUrl || null, // may be object URL (not persisted)
+      modelName: modelName || null,
       build: (cColor)=>{
         const g = new THREE.Group();
-        // simple parametric block representing the product sized to the given w/d
+        if(newItem.modelUrl && typeof THREE.GLTFLoader !== 'undefined'){
+          // placeholder while loading
+          addBox(g, Math.min(0.6,w), 0.02, Math.min(0.6,d), mat('#888', 1), 0, 0.01, 0);
+          try{
+            const loader = new THREE.GLTFLoader();
+            loader.load(newItem.modelUrl, (gltf)=>{
+              const model = gltf.scene || gltf.scenes && gltf.scenes[0];
+              if(!model) return;
+              model.traverse(n=>{ if(n.isMesh){ n.castShadow=true; n.receiveShadow=true; } });
+              // scale model to roughly fit width/depth — crude fit: compute bbox
+              const box = new THREE.Box3().setFromObject(model);
+              const size = new THREE.Vector3(); box.getSize(size);
+              const sx = (newItem.w) / Math.max(size.x, 0.001);
+              const sz = (newItem.d) / Math.max(size.z, 0.001);
+              const s = Math.min(sx, sz, 1.5);
+              model.scale.setScalar(s);
+              // center
+              const center = new THREE.Vector3(); box.getCenter(center);
+              model.position.sub(center.multiplyScalar(s));
+              g.clear(); g.add(model);
+            }, undefined, (err)=>{ console.warn('GLTF load failed', err); });
+          }catch(err){ console.warn('GLTF loader not available', err); }
+          return g;
+        }
+        // fallback: simple parametric block representing the product sized to the given w/d
         addBox(g, w, 0.45, d, mat(cColor || color, 0.6), 0, 0.225, 0);
         return g;
       }
@@ -534,14 +588,31 @@ document.getElementById('addProductBtn').addEventListener('click', ()=>{
     document.getElementById('prodName').value='';
     document.getElementById('prodPrice').value='';
     document.getElementById('prodImage').value = '';
+    document.getElementById('prodModel').value = '';
     document.getElementById('prodPreview').style.display='none';
+    const pm = document.getElementById('prodModelName'); if(pm){ pm.style.display='none'; pm.textContent=''; }
   };
-  if(file){
+
+  // read image first (if any), then create object URL for model (if any)
+  if(imageFile){
     const reader = new FileReader();
-    reader.onload = ()=> doAdd(reader.result);
-    reader.readAsDataURL(file);
+    reader.onload = ()=>{
+      const imgData = reader.result;
+      if(modelFile){
+        const modelUrl = URL.createObjectURL(modelFile);
+        addWithImageAndModel(imgData, modelUrl, modelFile.name);
+      } else {
+        addWithImageAndModel(imgData, null, null);
+      }
+    };
+    reader.readAsDataURL(imageFile);
   } else {
-    doAdd(null);
+    if(modelFile){
+      const modelUrl = URL.createObjectURL(modelFile);
+      addWithImageAndModel(null, modelUrl, modelFile.name);
+    } else {
+      addWithImageAndModel(null, null, null);
+    }
   }
 });
 
@@ -554,6 +625,7 @@ document.getElementById('clearProductBtn').addEventListener('click', ()=>{
   document.getElementById('prodCat').value='seating';
   document.getElementById('prodImage').value='';
   const pv = document.getElementById('prodPreview'); if(pv){ pv.src=''; pv.style.display='none'; }
+  const pm = document.getElementById('prodModelName'); if(pm){ pm.style.display='none'; pm.textContent=''; }
 });
 
 // preview selected image in the upload form
@@ -567,6 +639,16 @@ if(prodImageEl){
       pv.src = r.result; pv.style.display='block';
     };
     r.readAsDataURL(f);
+  });
+}
+// show selected model filename
+const prodModelEl = document.getElementById('prodModel');
+if(prodModelEl){
+  prodModelEl.addEventListener('change', (e)=>{
+    const f = e.target.files && e.target.files[0];
+    const pm = document.getElementById('prodModelName');
+    if(!f){ if(pm){ pm.style.display='none'; pm.textContent=''; } return; }
+    pm.textContent = f.name; pm.style.display='inline-block';
   });
 }
 

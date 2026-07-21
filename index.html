@@ -43,8 +43,12 @@
             <input id="prodColor" type="color" value="#cccccc" style="width:48px;border:none;background:transparent;">
           </div>
           <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
-            <input id="prodImage" type="file" accept="image/*" style="flex:1;">
-            <img id="prodPreview" src="" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #ccc;display:none;margin-left:6px;">
+            <div style="flex:1;display:flex;gap:6px;align-items:center;">
+              <input id="prodImage" type="file" accept="image/*" style="flex:1;">
+              <input id="prodModel" type="file" accept=".glb,.gltf" title="Upload GLB/GLTF model" style="width:160px;">
+            </div>
+            <img id="prodPreview" src="" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #ccc;display:none;margin-left:6px;">
+            <span id="prodModelName" style="font-size:12px;color:var(--text-dim);margin-left:8px;display:none;"></span>
           </div>
           <div style="display:flex;gap:6px;">
             <input id="prodWidth" placeholder="Width (m)" type="number" min="0.1" step="0.05" value="1.0" style="flex:1;padding:6px;border-radius:4px;border:1px solid #ccc;">
@@ -100,6 +104,7 @@
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
