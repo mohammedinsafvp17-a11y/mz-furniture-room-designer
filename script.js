@@ -32,6 +32,7 @@ const CATS = [
   {id:'bedroom', label:'Bedroom'},
   {id:'lighting', label:'Lighting'},
   {id:'decor', label:'Decor'},
+  {id:'other', label:'Other'},
 ];
 
 const FLOOR_COLORS = ['#8a6a45','#5c4028','#c9b28a','#2f2a26'];
@@ -444,8 +445,9 @@ function renderCatalog(){
   CATALOG.filter(c=> activeCat==='all' || c.cat===activeCat).forEach(c=>{
     const card = document.createElement('div');
     card.className='card';
+    const swatchBg = c.color ? c.color : `var(--${c.cat})`;
     card.innerHTML = `
-      <div class="swatch" style="background:var(--${c.cat})"></div>
+      <div class="swatch" style="background:${swatchBg}"></div>
       <div class="card-body">
         <div class="name">${c.name}</div>
         <div class="meta">${c.w.toFixed(2)}m × ${c.d.toFixed(2)}m</div>
@@ -457,6 +459,49 @@ function renderCatalog(){
   });
 }
 renderTabs(); renderCatalog();
+
+// ---------- product upload / add-to-catalog handler ----------
+document.getElementById('addProductBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('prodName').value.trim();
+  const price = parseFloat(document.getElementById('prodPrice').value);
+  const cat = document.getElementById('prodCat').value || 'other';
+  const color = document.getElementById('prodColor').value || '#999999';
+  const w = parseFloat(document.getElementById('prodWidth').value) || 1.0;
+  const d = parseFloat(document.getElementById('prodDepth').value) || 0.5;
+  if(!name){ showToast('Enter a product name'); return; }
+  const id = 'u-'+Date.now();
+  const newItem = {
+    id,
+    name,
+    price: isNaN(price) ? 0 : price,
+    cat,
+    w,
+    d,
+    color,
+    build: (cColor)=>{
+      const g = new THREE.Group();
+      // simple parametric block representing the product sized to the given w/d
+      addBox(g, w, 0.45, d, mat(cColor, 0.6), 0, 0.225, 0);
+      return g;
+    }
+  };
+  CATALOG.push(newItem);
+  if(!CATS.find(x=>x.id===cat)) { CATS.push({id:cat, label:cat.charAt(0).toUpperCase()+cat.slice(1)}); renderTabs(); }
+  renderCatalog();
+  showToast('Product added to catalog');
+  // clear inputs
+  document.getElementById('prodName').value='';
+  document.getElementById('prodPrice').value='';
+});
+
+document.getElementById('clearProductBtn').addEventListener('click', ()=>{
+  document.getElementById('prodName').value='';
+  document.getElementById('prodPrice').value='';
+  document.getElementById('prodWidth').value='1.0';
+  document.getElementById('prodDepth').value='0.5';
+  document.getElementById('prodColor').value='#cccccc';
+  document.getElementById('prodCat').value='seating';
+});
 
 /* ---------- UI: settings panel ---------- */
 function renderSwatches(containerId, colors, selectedIdx, onPick){

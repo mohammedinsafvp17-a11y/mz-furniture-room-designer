@@ -24,6 +24,34 @@
     <div id="sidebar">
         <button id="toggleSidebar" class="toggle-btn">☰</button>
 
+        <div id="productUpload" class="upload-section">
+          <h3 style="margin:6px 0 8px 0; font-size:14px;">Upload / Add Product</h3>
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <input id="prodName" placeholder="Product name" style="flex:1;padding:6px;border-radius:4px;border:1px solid #ccc;">
+            <input id="prodPrice" placeholder="Price" type="number" min="0" step="0.01" style="width:96px;padding:6px;border-radius:4px;border:1px solid #ccc;">
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <select id="prodCat" style="flex:1;padding:6px;border-radius:4px;border:1px solid #ccc;">
+              <option value="seating">Seating</option>
+              <option value="tables">Tables</option>
+              <option value="storage">Storage</option>
+              <option value="bedroom">Bedroom</option>
+              <option value="lighting">Lighting</option>
+              <option value="decor">Decor</option>
+              <option value="other">Other</option>
+            </select>
+            <input id="prodColor" type="color" value="#cccccc" style="width:48px;border:none;background:transparent;">
+          </div>
+          <div style="display:flex;gap:6px;">
+            <input id="prodWidth" placeholder="Width (m)" type="number" min="0.1" step="0.05" value="1.0" style="flex:1;padding:6px;border-radius:4px;border:1px solid #ccc;">
+            <input id="prodDepth" placeholder="Depth (m)" type="number" min="0.1" step="0.05" value="0.5" style="width:120px;padding:6px;border-radius:4px;border:1px solid #ccc;">
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="btn" id="addProductBtn">Add product</button>
+            <button class="btn" id="clearProductBtn">Clear</button>
+          </div>
+        </div>
+
         <div id="tabs"></div>
 
         <div id="catalog"></div>
