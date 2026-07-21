@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MZ Furniture — Room Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">
+      <h1>MZ Furniture</h1>
+      <span class="tag">Room Designer</span>
+    </div>
+    <div class="actions">
+      <button class="btn" id="resetBtn">Reset Room</button>
+      <button class="btn primary" id="cartBtn">Add Room to Cart</button>
+    </div>
+  </header>
+<main>
+    <div id="sidebar">
+        <button id="toggleSidebar" class="toggle-btn">☰</button>
+
+        <div id="tabs"></div>
+
+        <div id="catalog"></div>
+    </div>
+
+    <div id="stage">
+      <button id="openSettings" class="settings-toggle-btn" title="Settings">⚙</button>
+      <div id="hint" class="floating">
+        <b style="color:var(--text)">Controls</b><br>
+        Drag empty space to orbit &nbsp;·&nbsp; Scroll to zoom<br>
+        Click a piece to select and drag it<br>
+        Click a catalog item to add it to the room<br>
+        <b style="color:var(--text)">Keyboard</b> (with a piece selected):<br>
+        Arrow keys move it &nbsp;·&nbsp; Q / E rotate it &nbsp;·&nbsp; Delete removes it
+      </div>
+      <div id="settings" class="floating hidden">
+        <button class="close-btn" id="closeSettings" title="Close">✕</button>
+        <h3>Floor</h3>
+        <div class="swatch-row" id="floorSwatches"></div>
+        <h3>Walls</h3>
+        <div class="swatch-row" id="wallSwatches"></div>
+        <h3>Room size</h3>
+        <div class="slider-row">Width <span id="wVal"></span> m</div>
+        <input type="range" id="widthSlider" min="3" max="8" step="0.5">
+        <div class="slider-row" style="margin-top:8px;">Depth <span id="dVal"></span> m</div>
+        <input type="range" id="depthSlider" min="3" max="8" step="0.5">
+      </div>
+      <div id="toolbar" class="floating" style="display:none;">
+        <span class="sel-name" id="selName"></span>
+        <span class="sel-price" id="selPrice"></span>
+        <button class="icon-btn" id="rotLeft" title="Rotate left">⟲</button>
+        <button class="icon-btn" id="rotRight" title="Rotate right">⟳</button>
+        <button class="icon-btn" id="delSel" title="Remove" style="color:var(--danger)">✕</button>
+      </div>
+    </div>
+  </main>
+  <div id="footer">
+    <div><span class="total">Estimated total: <b id="totalPrice">$0</b></span><span class="count" id="itemCount">0 pieces placed</span></div>
+    <div style="font-size:11.5px;color:var(--text-dim);">Layout saves automatically to this browser</div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
