@@ -42,6 +42,10 @@
             </select>
             <input id="prodColor" type="color" value="#cccccc" style="width:48px;border:none;background:transparent;">
           </div>
+          <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+            <input id="prodImage" type="file" accept="image/*" style="flex:1;">
+            <img id="prodPreview" src="" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #ccc;display:none;margin-left:6px;">
+          </div>
           <div style="display:flex;gap:6px;">
             <input id="prodWidth" placeholder="Width (m)" type="number" min="0.1" step="0.05" value="1.0" style="flex:1;padding:6px;border-radius:4px;border:1px solid #ccc;">
             <input id="prodDepth" placeholder="Depth (m)" type="number" min="0.1" step="0.05" value="0.5" style="width:120px;padding:6px;border-radius:4px;border:1px solid #ccc;">

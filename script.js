@@ -445,19 +445,56 @@ function renderCatalog(){
   CATALOG.filter(c=> activeCat==='all' || c.cat===activeCat).forEach(c=>{
     const card = document.createElement('div');
     card.className='card';
-    const swatchBg = c.color ? c.color : `var(--${c.cat})`;
-    card.innerHTML = `
-      <div class="swatch" style="background:${swatchBg}"></div>
-      <div class="card-body">
-        <div class="name">${c.name}</div>
-        <div class="meta">${c.w.toFixed(2)}m × ${c.d.toFixed(2)}m</div>
-        <div class="price">$${c.price}</div>
-      </div>
-      <div class="add-icon">+</div>`;
+        const swatchBg = c.color ? c.color : `var(--${c.cat})`;
+        const thumb = c.image ? `<img src="${c.image}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;margin-right:10px;">` : `<div class="swatch" style="background:${swatchBg}"></div>`;
+        card.innerHTML = `
+          ${thumb}
+          <div class="card-body">
+            <div class="name">${c.name}</div>
+            <div class="meta">${c.w.toFixed(2)}m × ${c.d.toFixed(2)}m</div>
+            <div class="price">$${c.price}</div>
+          </div>
+          <div class="add-icon">+</div>`;
     card.onclick = ()=> addFromCatalog(c.id);
     catalogEl.appendChild(card);
   });
 }
+// load any previously saved custom catalog entries (images stored as data URLs)
+function saveCatalog(){
+  try{
+    const custom = CATALOG.filter(it=> String(it.id).startsWith('u-')).map(it=>({ id: it.id, name: it.name, price: it.price, cat: it.cat, w: it.w, d: it.d, color: it.color, image: it.image }));
+    localStorage.setItem('mz-room-custom-catalog', JSON.stringify(custom));
+  }catch(err){ console.warn('saveCatalog failed', err); }
+}
+function loadCatalog(){
+  try{
+    const raw = localStorage.getItem('mz-room-custom-catalog');
+    if(!raw) return;
+    const arr = JSON.parse(raw);
+    arr.forEach(item=>{
+      // rebuild runtime entry with a builder function
+      const newItem = {
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        cat: item.cat,
+        w: item.w,
+        d: item.d,
+        color: item.color,
+        image: item.image,
+        build: (cColor)=>{
+          const g = new THREE.Group();
+          addBox(g, item.w, 0.45, item.d, mat(cColor || item.color || '#999', 0.6), 0, 0.225, 0);
+          return g;
+        }
+      };
+      CATALOG.push(newItem);
+      if(!CATS.find(x=>x.id===item.cat)) CATS.push({id:item.cat, label:item.cat.charAt(0).toUpperCase()+item.cat.slice(1)});
+    });
+  }catch(err){ console.warn('loadCatalog failed', err); }
+}
+
+loadCatalog();
 renderTabs(); renderCatalog();
 
 // ---------- product upload / add-to-catalog handler ----------
@@ -470,28 +507,42 @@ document.getElementById('addProductBtn').addEventListener('click', ()=>{
   const d = parseFloat(document.getElementById('prodDepth').value) || 0.5;
   if(!name){ showToast('Enter a product name'); return; }
   const id = 'u-'+Date.now();
-  const newItem = {
-    id,
-    name,
-    price: isNaN(price) ? 0 : price,
-    cat,
-    w,
-    d,
-    color,
-    build: (cColor)=>{
-      const g = new THREE.Group();
-      // simple parametric block representing the product sized to the given w/d
-      addBox(g, w, 0.45, d, mat(cColor, 0.6), 0, 0.225, 0);
-      return g;
-    }
+  const file = document.getElementById('prodImage').files && document.getElementById('prodImage').files[0];
+  const doAdd = (imageData)=>{
+    const newItem = {
+      id,
+      name,
+      price: isNaN(price) ? 0 : price,
+      cat,
+      w,
+      d,
+      color,
+      image: imageData || null,
+      build: (cColor)=>{
+        const g = new THREE.Group();
+        // simple parametric block representing the product sized to the given w/d
+        addBox(g, w, 0.45, d, mat(cColor || color, 0.6), 0, 0.225, 0);
+        return g;
+      }
+    };
+    CATALOG.push(newItem);
+    saveCatalog();
+    if(!CATS.find(x=>x.id===cat)) { CATS.push({id:cat, label:cat.charAt(0).toUpperCase()+cat.slice(1)}); renderTabs(); }
+    renderCatalog();
+    showToast('Product added to catalog');
+    // clear inputs
+    document.getElementById('prodName').value='';
+    document.getElementById('prodPrice').value='';
+    document.getElementById('prodImage').value = '';
+    document.getElementById('prodPreview').style.display='none';
   };
-  CATALOG.push(newItem);
-  if(!CATS.find(x=>x.id===cat)) { CATS.push({id:cat, label:cat.charAt(0).toUpperCase()+cat.slice(1)}); renderTabs(); }
-  renderCatalog();
-  showToast('Product added to catalog');
-  // clear inputs
-  document.getElementById('prodName').value='';
-  document.getElementById('prodPrice').value='';
+  if(file){
+    const reader = new FileReader();
+    reader.onload = ()=> doAdd(reader.result);
+    reader.readAsDataURL(file);
+  } else {
+    doAdd(null);
+  }
 });
 
 document.getElementById('clearProductBtn').addEventListener('click', ()=>{
@@ -501,7 +552,23 @@ document.getElementById('clearProductBtn').addEventListener('click', ()=>{
   document.getElementById('prodDepth').value='0.5';
   document.getElementById('prodColor').value='#cccccc';
   document.getElementById('prodCat').value='seating';
+  document.getElementById('prodImage').value='';
+  const pv = document.getElementById('prodPreview'); if(pv){ pv.src=''; pv.style.display='none'; }
 });
+
+// preview selected image in the upload form
+const prodImageEl = document.getElementById('prodImage');
+if(prodImageEl){
+  prodImageEl.addEventListener('change', (e)=>{
+    const f = e.target.files && e.target.files[0];
+    const pv = document.getElementById('prodPreview');
+    if(!f){ if(pv){ pv.src=''; pv.style.display='none'; } return; }
+    const r = new FileReader(); r.onload = ()=>{
+      pv.src = r.result; pv.style.display='block';
+    };
+    r.readAsDataURL(f);
+  });
+}
 
 /* ---------- UI: settings panel ---------- */
 function renderSwatches(containerId, colors, selectedIdx, onPick){
